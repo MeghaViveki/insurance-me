@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+
+
+    stages {
+        stage('clone') {
+            steps {
+                git branch: 'master', credentialsId: 'Megha', url: 'https://github.com/MeghaViveki/insurance-me.git'
+               
+            }
+
+        }
+        stage('Build') {
+            steps {
+               script{
+                 bat 'mvn clean install'
+               }
+            }
+
+        }
+         stage('containerizing') {
+            steps {
+               script{
+                 bat 'docker build -t meghaviveki/insurance-backend .'
+               }
+            }
+
+        }
+        stage('pushing to dockerhub') {
+            steps {
+               script{
+                 bat "docker tag meghaviveki/insurance-backend:latest meghaviveki/insurance-backend:v${BUILD_NUMBER}"
+                 bat " echo ${env.docker_hub_pass} | docker login -u meghaviveki --password-stdin"
+                 bat "docker push meghaviveki/insurance-backend:v${BUILD_NUMBER}"
+               }
+            }
+
+        }
+    }
+}
