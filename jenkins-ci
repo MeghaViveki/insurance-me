@@ -1,40 +1,54 @@
 pipeline {
     agent any
-
+    // This pipeline can run on any available Jenkins agent (Linux or Windows)
 
     stages {
-        stage('clone') {
-            steps {
-                git branch: 'master', credentialsId: 'Megha', url: 'https://github.com/MeghaViveki/insurance-me.git'
-               
-            }
 
-        }
-        stage('Build') {
+        stage('Clone Repository') {
             steps {
-               script{
-                 bat 'mvn clean install'
-               }
-            }
+                // Clone the insurance-me repository from the 'master' branch using credentials stored in Jenkins
+                git branch: 'master',
+                    credentialsId: 'Megha',
+                    url: 'https://github.com/MeghaViveki/insurance-me.git'
 
+                // Make sure 'Megha' is a valid Jenkins credential ID (GitHub PAT or SSH key)
+            }
         }
-         stage('containerizing') {
+
+        stage('Build Application') {
             steps {
-               script{
-                 bat 'docker build -t meghaviveki/insurance-backend .'
-               }
+                script {
+                    // Run Maven build command on Windows agent using `bat`
+                    // This compiles the project and builds the JAR
+                    bat 'mvn clean install'
+                }
             }
-
         }
-        stage('pushing to dockerhub') {
+
+        stage('Containerize Application') {
             steps {
-               script{
-                 bat "docker tag meghaviveki/insurance-backend:latest meghaviveki/insurance-backend:v${BUILD_NUMBER}"
-                 bat " echo ${env.docker_hub_pass} | docker login -u meghaviveki --password-stdin"
-                 bat "docker push meghaviveki/insurance-backend:v${BUILD_NUMBER}"
-               }
+                script {
+                    // Build a Docker image for the insurance backend
+                    // This uses the Dockerfile located in the root of the cloned project
+                    bat 'docker build -t meghaviveki/insurance-backend .'
+                }
             }
-
         }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                script {
+                    // Tag the Docker image with the Jenkins build number for versioning
+                    bat "docker tag meghaviveki/insurance-backend:latest meghaviveki/insurance-backend:v${BUILD_NUMBER}"
+
+                    // Authenticate to Docker Hub using credentials stored as environment variable
+                    bat "echo ${env.docker_hub_pass} | docker login -u meghaviveki --password-stdin"
+
+                    // Push the tagged image to Docker Hub
+                    bat "docker push meghaviveki/insurance-backend:v${BUILD_NUMBER}"
+                }
+            }
+        }
+
     }
 }

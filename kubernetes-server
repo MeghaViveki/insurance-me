@@ -1,0 +1,10 @@
+# Inventory file for Ansible targeting the Kubernetes server(s)
+# This file lists the hosts or groups of hosts where Ansible will run the playbook
+
+[kubernetes-server]
+# Replace the below IP or hostname with your actual Kubernetes master/node IP or DNS name
+k8s-master.example.com ansible_user=ubuntu ansible_ssh_private_key_file=megha-key.pem
+
+# You can add more Kubernetes nodes here if needed
+# k8s-node1.example.com ansible_user=ubuntu ansible_ssh_private_key_file=megha-key.pem
+# k8s-node2.example.com ansible_user=ubuntu ansible_ssh_private_key_file=megha-key.pem

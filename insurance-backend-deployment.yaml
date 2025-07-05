@@ -1,0 +1,26 @@
+apiVersion: apps/v1                         # Specifies the API version for Deployment resources
+kind: Deployment                            # Declares this manifest as a Deployment
+
+metadata:
+  name: insurance-backend                   # The name of the Deployment; used for tracking and managing updates
+
+spec:
+  replicas: 1                               # Specifies that 1 replica/pod should be running
+  selector:
+    matchLabels:
+      app: insurance-backend                # Used by the Deployment to identify which pods to manage
+
+  template:                                 # The pod template that will be used to create the replica(s)
+    metadata:
+      labels:
+        app: insurance-backend              # Labels applied to the pod; must match the selector above
+
+    spec:
+      containers:
+      - name: insurance-backend             # Name of the container within the pod
+        image: meghaviveki/insurance-backend:${VERSION}
+        # The Docker image to run for this container.
+        # ${VERSION} is a placeholder that will be dynamically replaced (e.g., using Ansible) with the actual image tag.
+
+        ports:
+        - containerPort: 8081               # Port that the container listens on; should match service targetPort

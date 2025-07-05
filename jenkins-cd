@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+    // This pipeline can run on any available Jenkins agent
+
+    parameters {
+        string(
+            name: 'version',
+            defaultValue: 'latest',
+            description: 'Enter the Docker image version/tag (e.g., v1.0, latest)'
+        )
+        // Enables users to specify a version tag for the Docker image at build time
+    }
+
+    stages {
+
+        stage('Clone Repository') {
+            steps {
+                // Clone the finance-banking-app repository from GitHub using the 'main' branch
+                git branch: 'main',
+                    credentialsId: 'Megha',
+                    url: 'https://github.com/MeghaViveki/finacne-banking-app.git'
+
+                // Ensure that the Jenkins credential with ID 'Megha' is correctly configured
+                // (e.g., GitHub PAT or SSH key stored in Jenkins credentials)
+            }
+        }
+
+        stage('Deploy via Ansible') {
+            steps {
+                script {
+                    // Set the correct permissions for the private SSH key (required for Ansible SSH)
+                    sh 'chmod 400 megha-key.pem'
+
+                    // Run the Ansible playbook to deploy the Docker container to Kubernetes
+                    // using the specified version tag and targeting inventory from 'kubernetes-server'
+                    sh """
+                        ansible-playbook -i kubernetes-server ansible-playbook.yml \
+                        -u ubuntu \                                 // Remote SSH username
+                        --private-key megha-key.pem \               // Path to private key for authentication
+                        --extra-vars "docker_image_tag=${version}"  // Pass version dynamically to Ansible
+                    """
+
+                    // Notes:
+                    // - The 'kubernetes-server' file should contain the IP or hostname of the target Kubernetes node(s)
+                    // - 'ansible-playbook.yml' should use the variable 'docker_image_tag' to substitute the image version
+                    // - Ensure 'kubectl', Ansible, and required YAML files are accessible on the remote host
+                    // - SSH key should be stored securely in Jenkins and managed appropriately
+                }
+            }
+        }
+
+    }
+}

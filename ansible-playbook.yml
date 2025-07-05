@@ -1,20 +1,39 @@
-- name : Configure Docker on EC2 Instances
-  hosts : all
-  become: true
-  connection : ssh
-  tasks : 
-  - name: updating apt
-    command : sudo apt-get update
+- name: Deploy Healthcare Backend to Kubernetes
+  hosts: all                           # Target all servers listed in the Ansible inventory
+  become: true                        # Run tasks with elevated (sudo) privileges
+  connection: ssh                     # Use SSH for connecting to the remote hosts
 
-  - name : Install Docker
-    command : sudo apt-get install -y docker.io
-    become : yes
-    become_user : root
+  vars:
+    docker_image_tag: v6                               # Docker image tag to be used (override via --extra-vars)
+    kube_deployment_template: insurance-backend-deployment.yaml
+    kube_service_file: insurance-backend-service.yaml
 
-  - name : Start Docker Service
-    command : sudo systemctl start docker
-    become : yes
-    become_user : root
+  tasks:
 
-  - name: Deploy Docker Container
-    command: docker run -itd -p 8084:8081 shubhamkushwah123/insure-me:3.0
+    - name: Copy Kubernetes Deployment template to remote host
+      copy:
+        src: "{{ kube_deployment_template }}"
+        dest: "{{ kube_deployment_template }}"
+        mode: '0644'
+      # Copies the deployment template to the same path on the remote machine
+
+    - name: Copy Kubernetes Service file to remote host
+      copy:
+        src: "{{ kube_service_file }}"
+        dest: "{{ kube_service_file }}"
+        mode: '0644'
+      # Copies the service manifest to the same path on the remote machine
+
+    - name: Apply deployment and service using kubectl
+      shell: |
+        # Replace the ${VERSION} placeholder with the actual tag in deployment YAML
+        sed "s|\${VERSION}|{{ docker_image_tag }}|" {{ kube_deployment_template }} > temp-deployment.yaml
+
+        # Concatenate the modified deployment and the service YAML, then apply all in one kubectl call
+        cat temp-deployment.yaml {{ kube_service_file }} | kubectl apply -f -
+
+        # Clean up temporary deployment file
+        rm -f temp-deployment.yaml
+      args:
+        executable: /bin/bash
+      # Ensures both deployment and service are deployed together, and temp file is removed after use
